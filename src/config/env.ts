@@ -14,7 +14,9 @@ const envSchema = z.object({
   //   FRONTEND_URL: z.string().url({ message: "Frontend URL must be a valid URL" }),
   JWT_ACCESS_SECRET: z.string().min(10, { message: "Access secret must be at least 10 chars" }),
   JWT_REFRESH_SECRET: z.string().min(10, { message: "Refresh secret must be at least 10 chars" }),
-  RESEND_API_KEY: z.string().min(1, { message: "MongoDB URI is required" }),
+  ZEPTOMAIL_API_KEY: z.string().min(1, { message: "Zepto Mail API_KEY is required" }),
+  STRIPE_SECRET_KEY: z.string().min(1, { message: "Stripe API_KEY is required" }),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1, { message: "Stripe WEBHOOK_SECRET is required" }),
   REDIS_URI: z.string().min(1, { message: "Redis URI must be a valid URL" }),
 });
 

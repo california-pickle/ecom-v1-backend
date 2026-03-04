@@ -16,8 +16,10 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { connectDB } from "./config/db.js"; // Assuming you put our DB code here
 import authRoutes from "./modules/auth/auth.routes.js";
-import userRoutes from "./modules/user/user.routes.js";
+import adminRoutes from "./modules/admin/admin.routes.js";
 import productRoutes from "./modules/product/product.routes.js";
+import orderRoutes from "./modules/order/order.routes.js";
+import paymentRoutes from "./modules/payment/payment.routes.js";
 // redis and email import
 import "./config/redis.js";
 import "./jobs/email.worker.js";
@@ -43,9 +45,10 @@ app.use(cookieParser()); // Parses req.cookies!
 
 // 4. Register Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/products", productRoutes);
-
+app.use("/api/order", orderRoutes);
+app.use("/api/payments", paymentRoutes);
 // 5. Start Server
 const PORT = env.PORT || 5000;
 

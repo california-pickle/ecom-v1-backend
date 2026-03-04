@@ -1,44 +1,26 @@
-import type { Request, Response } from "express";
-import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema } from "./auth.schema.js";
+import type { Request, Response, CookieOptions } from "express";
+import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from "./auth.schema.js";
 import * as AuthService from "./auth.service.js";
 import { cookieOptions } from "../../lib/jwt.js";
 
 const isProd = process.env.NODE_ENV === "production";
 
-// Reusable cookie setter
 const setCookies = (res: Response, access: string, refresh?: string) => {
   res.cookie("accessToken", access, {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? "strict" : "none",
-    maxAge: 15 * 60 * 1000, //15 min
+    maxAge: 15 * 60 * 1000,
   });
   if (refresh) {
     res.cookie("refreshToken", refresh, {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? "strict" : "none",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
 };
-
-export async function registerHandler(req: Request, res: Response) {
-  try {
-    const parsed = registerSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ errors: parsed.error.format() });
-    }
-
-    const user = await AuthService.registerUser(parsed.data);
-    return res.status(201).json({ message: "User registered successfully", user });
-  } catch (error: any) {
-    if (error.message === "EMAIL_IN_USE") {
-      return res.status(409).json({ message: "Email already in use" });
-    }
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}
 
 export async function loginHandler(req: Request, res: Response) {
   try {
@@ -47,22 +29,15 @@ export async function loginHandler(req: Request, res: Response) {
       return res.status(400).json({ errors: parsed.error.format() });
     }
 
-    const { user, accessToken, refreshToken } = await AuthService.loginUser(parsed.data);
+    // Call loginAdmin instead of loginUser
+    const { admin, accessToken, refreshToken } = await AuthService.loginAdmin(parsed.data);
 
-    // Set cookies using the centralized security options from our lib
-    res.cookie("accessToken", accessToken, {
-      ...cookieOptions,
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    });
+    res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
+    res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-    res.cookie("refreshToken", refreshToken, {
-      ...cookieOptions,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    return res.status(200).json({ message: "Logged in successfully", user });
+    return res.status(200).json({ message: "Admin logged in successfully", admin });
   } catch (error: any) {
-    if (error.message === "INVALID_CREDENTIALS") {
+    if (error.message === "Invalid credentials") {
       return res.status(401).json({ message: "Invalid email or password" });
     }
     return res.status(500).json({ message: "Internal server error" });
@@ -75,11 +50,10 @@ export async function refreshHandler(req: Request, res: Response) {
     if (!refreshToken) return res.status(401).json({ message: "No refresh token" });
 
     const { accessToken } = await AuthService.refreshSession(refreshToken);
-    setCookies(res, accessToken); // Only update the access token
+    setCookies(res, accessToken);
 
     return res.status(200).json({ message: "Session refreshed" });
   } catch (error) {
-    // If refresh token is invalid/expired, clear cookies so the frontend knows to kick them to the login screen
     res.clearCookie("accessToken");
     res.clearCookie("refreshToken");
     return res.status(401).json({ message: "Session expired" });
@@ -88,20 +62,19 @@ export async function refreshHandler(req: Request, res: Response) {
 
 export async function logoutHandler(req: Request, res: Response) {
   try {
-    // 1. Safely extract the user ID attached by the requireAuth middleware
-    const userId = (req as any).user?.id;
+    const isProd = process.env.NODE_ENV === "production";
 
-    // Edge Case Check: If middleware failed to attach user, still clear cookies to be safe
-    if (userId) {
-      // 2. Invalidate the token in the database via the Service layer
-      await AuthService.logoutUser(userId);
-    }
+    const clearCookieOptions: CookieOptions = {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? "strict" : "none",
+      path: "/",
+    };
 
-    // 3. THE LOGOUT FIX: Clear cookies using the EXACT SAME options as login
-    res.clearCookie("accessToken", cookieOptions);
-    res.clearCookie("refreshToken", cookieOptions);
+    res.clearCookie("accessToken", clearCookieOptions);
+    res.clearCookie("refreshToken", clearCookieOptions);
 
-    return res.status(200).json({ message: "Logged out successfully across all devices" });
+    return res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error during logout" });
   }
@@ -114,8 +87,7 @@ export async function forgotPasswordHandler(req: Request, res: Response) {
 
     await AuthService.forgotPassword(parsed.data);
 
-    // Always send the exact same success message so hackers can't guess valid emails
-    return res.status(200).json({ message: "If an account exists, a reset link has been sent to that email." });
+    return res.status(200).json({ message: "If an account exists, a reset link has been sent." });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
   }

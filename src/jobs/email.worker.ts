@@ -1,35 +1,42 @@
 import { Worker, Job } from "bullmq";
-import { Resend } from "resend";
-import { env } from "../config/env.js";
+import nodemailer from "nodemailer";
+import { env } from "../config/env.js"; // Make sure ZEPTOMAIL_API_KEY is in here
 import { redisConnection } from "../config/redis.js";
 
-const resend = new Resend(env.RESEND_API_KEY);
+// 1. Create the Nodemailer transporter for ZeptoMail SMTP
+const transporter = nodemailer.createTransport({
+  host: "smtp.zeptomail.com",
+  port: 587,
+  auth: {
+    user: "emailapikey", // This is always "emailapikey" for ZeptoMail
+    pass: env.ZEPTOMAIL_API_KEY,
+  },
+});
 
+// 2. Define exactly what data the job expects
 interface EmailJobData {
-  type: "PASSWORD_RESET" | "WELCOME";
+  type: "PASSWORD_RESET" | "WELCOME" | "ORDER_CONFIRMATION";
   to: string;
   subject: string;
   html: string;
 }
 
+// 3. The Worker Logic
 export const emailWorker = new Worker<EmailJobData>(
   "email-queue",
   async (job: Job) => {
     console.log(`⏳ Worker picked up job: Sending ${job.data.type} to ${job.data.to}`);
 
-    const { data, error } = await resend.emails.send({
-      from: "Acme <onboarding@resend.dev>",
-      to: [job.data.to],
+    // transporter.sendMail is promise-based.
+    // If it fails, it throws an error which BullMQ catches automatically!
+    const info = await transporter.sendMail({
+      from: '"The California Pickle" <noreply@thecaliforniapickle.com>', // Matches your verified Zepto domain
+      to: job.data.to,
       subject: job.data.subject,
       html: job.data.html,
     });
 
-    // If Resend fails, throw the error so BullMQ knows to retry or fail the job
-    if (error) {
-      throw new Error(`Resend API Error: ${error.name} - ${error.message}`);
-    }
-
-    console.log(`✅ Email sent successfully (ID: ${data?.id})`);
+    console.log(`✅ Email sent successfully (Message ID: ${info.messageId})`);
   },
   {
     connection: redisConnection,
@@ -37,14 +44,13 @@ export const emailWorker = new Worker<EmailJobData>(
   },
 );
 
-// 👇 THE NEW ADDITIONS: Event listeners for debugging and logging
-
+// 👇 Event listeners for debugging and logging
 emailWorker.on("completed", (job) => {
   console.log(`🎉 Job ${job.id} completed successfully!`);
 });
 
 emailWorker.on("failed", (job, err) => {
-  // This will catch the Resend API error and print it to your console!
+  // This will catch any Nodemailer/SMTP errors (like bad API keys)
   console.error(`❌ Job ${job?.id} failed for ${job?.data.to}. Error:`, err.message);
 });
 

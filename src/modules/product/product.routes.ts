@@ -1,27 +1,24 @@
 import { Router } from "express";
 import {
-  getPublicProductsHandler,
   getAllProductsHandler,
   createProductHandler,
   updateProductHandler,
+  getStorefrontProductHandler,
 } from "./product.controller.js";
 
 import { requireAuth } from "../../middleware/requireAuth.js";
-import { requireRole } from "../../middleware/requireRole.js";
 
 const router = Router();
 
 // ==========================================
-// Public Routes (Users)
+// Public Routes (Storefront)
 // ==========================================
-// Returns only the strictly 3 active products
-router.get("/", getPublicProductsHandler);
-
+router.get("/storefront", getStorefrontProductHandler);
 // ==========================================
 // Admin Routes (Dashboard)
 // ==========================================
-router.get("/all", requireAuth, requireRole("admin"), getAllProductsHandler);
-router.post("/", requireAuth, requireRole("admin"), createProductHandler);
-router.put("/:id", requireAuth, requireRole("admin"), updateProductHandler);
+router.get("/admin/all", requireAuth, getAllProductsHandler);
+router.post("/", requireAuth, createProductHandler);
+router.put("/:id", requireAuth, updateProductHandler);
 
 export default router;
