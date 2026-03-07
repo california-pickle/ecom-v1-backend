@@ -1,7 +1,9 @@
 import Stripe from "stripe";
 import { env } from "../../config/env.js";
 import { Order } from "../order/order.model.js";
-// import { emailQueue } from "../../config/queue.js";
+import { Product } from "../product/product.model.js"; // 👈 ADDED: We need this to deduct stock!
+import { emailQueue } from "../../config/queue.js"; // 👈 Your BullMQ Queue
+import { getOrderReceiptTemplate } from "../../templates/order.template.js";
 
 // 1. Initialize Stripe (Bypassing the strict literal type check with 'as any')
 export const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
@@ -26,8 +28,6 @@ export async function createCheckoutSession(order: any) {
   });
 
   const session = await stripe.checkout.sessions.create({
-    // 👇 FIX: We removed 'payment_method_types'.
-    // Now Stripe will automatically use whatever you enable in your Dashboard!
     mode: "payment",
     customer_email: order.email,
     line_items: lineItems,
@@ -35,9 +35,10 @@ export async function createCheckoutSession(order: any) {
     // We attach the DB Order ID here so when Stripe pings us later, we know EXACTLY which order was paid for
     client_reference_id: order._id.toString(),
 
-    // Where Stripe sends them after they pay (Update these to your real frontend URLs later)
-    success_url: `http://localhost:${env.PORT}/order/session/{CHECKOUT_SESSION_ID}`,
-    cancel_url: `http://localhost:${env.PORT}/order/session/{CHECKOUT_SESSION_ID}`,
+    // Where Stripe sends them after they pay
+    // Note: I added '/api' so it correctly hits the GET route we built earlier for your testing!
+    success_url: `http://localhost:${env.PORT}/api/order/session/{CHECKOUT_SESSION_ID}`,
+    cancel_url: `http://localhost:${env.PORT}/api/order/session/{CHECKOUT_SESSION_ID}`,
 
     // We strictly enforce US shipping
     shipping_address_collection: {
@@ -69,18 +70,46 @@ export async function handleStripeWebhook(signature: string, rawBody: Buffer) {
     const orderId = session.client_reference_id;
 
     if (orderId) {
-      // Find the order and mark it as PAID!
       const order = await Order.findById(orderId);
-      if (order) {
+
+      // We only process if the order exists and is still "pending"
+      if (order && order.paymentStatus === "pending") {
+        // 1. Mark as Paid and save the Payment Intent ID (for future refunds)
         order.paymentStatus = "paid";
+        order.stripePaymentIntentId = session.payment_intent as string;
         await order.save();
 
-        console.log(`✅ Order ${orderId} has been successfully paid!`);
+        // 2. SAFELY DEDUCT THE INVENTORY NOW!
+        for (const item of order.items) {
+          // This goes into the Product collection and subtracts the exact amount bought
+          await Product.updateOne(
+            { _id: item.productId, "variants._id": item.variantId },
+            { $inc: { "variants.$.stock": -item.quantity } },
+          );
+        }
 
-        // 🚨 LATER: This is exactly where we will tell ZeptoMail to send the Order Receipt!
-        // await emailQueue.add("send-order-receipt", { ... });
+        console.log(`✅ Order ${orderId} Paid & Stock Deducted Successfully!`);
+
+        // 3. 🚨 ASYNC BACKGROUND EMAIL TRIGGER 🚨
+        const htmlContent = getOrderReceiptTemplate(
+          order.shippingAddress.firstName,
+          order._id.toString(),
+          order.totalAmount,
+          order.items,
+          order.shippingAddress,
+        );
+
+        // Toss it into the Redis Queue. Takes 1ms!
+        await emailQueue.add("send-order-receipt", {
+          type: "ORDER_CONFIRMATION",
+          to: order.email,
+          subject: "Order Confirmed - The California Pickle 🥒",
+          html: htmlContent,
+        });
+
+        console.log(`✉️ Added Order Confirmation to Redis queue for ${order.email}`);
       } else {
-        console.error(`🚨 Webhook received for Order ${orderId}, but it doesn't exist in our DB!`);
+        console.error(`🚨 Webhook received for Order ${orderId}, but it's not pending or doesn't exist!`);
       }
     }
   } else {
@@ -88,5 +117,6 @@ export async function handleStripeWebhook(signature: string, rawBody: Buffer) {
     console.log(`ℹ️ Unhandled Stripe Event: ${event.type}`);
   }
 
+  // Instantly respond 200 OK so Stripe knows we successfully caught the webhook
   return { received: true };
 }

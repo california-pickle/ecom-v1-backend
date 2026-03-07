@@ -24,6 +24,7 @@ import paymentRoutes from "./modules/payment/payment.routes.js";
 import "./config/redis.js";
 import "./jobs/email.worker.js";
 import { env } from "./config/env.js";
+import { globalLimiter } from "./middleware/rateLimiter.js";
 
 const app = express();
 
@@ -33,7 +34,6 @@ app.set("trust proxy", 1);
 // 2. The CORS Fix (Allows cookies cross-origin)
 app.use(
   cors({
-    // In production, this MUST be your exact frontend URL (e.g., "https://my-store.com")
     origin: "*", // env.FRONTEND_URL
     credentials: true, // This is the magic line that allows cookies to pass!
   }),
@@ -43,6 +43,9 @@ app.use("/api/payments", paymentRoutes);
 // 3. Body & Cookie Parsers (The Cookie Fix)
 app.use(express.json()); // Parses req.body
 app.use(cookieParser()); // Parses req.cookies!
+
+//rate limiter
+app.use(globalLimiter);
 
 // 4. Register Routes
 app.use("/api/auth", authRoutes);

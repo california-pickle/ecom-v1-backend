@@ -9,14 +9,8 @@ export const createOrderSchema = z.object({
     street: z.string().min(5, { message: "Street address is required" }),
     aptOrSuite: z.string().optional(),
     city: z.string().min(2, { message: "City is required" }),
-
-    // Strict 2-letter US State Code (e.g., CA, TX, NY)
     state: z.string().length(2, { message: "State must be a 2-letter code (e.g., CA)" }).toUpperCase(),
-
-    // Strict 5-digit US ZIP Code Regex
     zipCode: z.string().regex(/^\d{5}$/, { message: "Must be a valid 5-digit US ZIP Code" }),
-
-    // Strict 10-digit US Phone Number Regex (Strips out dashes if they type them)
     phone: z.string().regex(/^\d{10}$/, { message: "Must be a valid 10-digit US phone number (no spaces or dashes)" }),
   }),
 
@@ -32,3 +26,13 @@ export const createOrderSchema = z.object({
 });
 
 export type CreateOrderDTO = z.infer<typeof createOrderSchema>;
+
+export const orderIdParamSchema = z.object({
+  id: z.string().length(24, { message: "Invalid MongoDB ID format" }),
+});
+
+export const updateOrderStatusSchema = z.object({
+  orderStatus: z.enum(["processing", "shipped", "delivered", "cancelled"], {
+    message: "Status must be processing, shipped, delivered, or cancelled",
+  }),
+});

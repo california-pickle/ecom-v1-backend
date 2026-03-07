@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from "mongoose"; // 👈 FIX: Import Types
+import { Schema, model, Document, Types } from "mongoose";
 
 export interface IOrderItem {
   productId: Types.ObjectId;
@@ -10,7 +10,6 @@ export interface IOrderItem {
 }
 
 export interface IOrder extends Document {
-  userId?: Types.ObjectId | null;
   email: string;
   shippingAddress: {
     firstName: string;
@@ -26,6 +25,8 @@ export interface IOrder extends Document {
   totalAmount: number;
   paymentStatus: "pending" | "paid" | "failed";
   stripeSessionId?: string | null;
+  // 👇 ADDED: We will need this exact ID later when we build the refund feature
+  stripePaymentIntentId?: string | null;
   orderStatus: "processing" | "shipped" | "delivered" | "cancelled";
   createdAt: Date;
   updatedAt: Date;
@@ -42,7 +43,6 @@ const orderItemSchema = new Schema<IOrderItem>({
 
 const orderSchema = new Schema<IOrder>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     email: { type: String, required: true, lowercase: true, trim: true },
     shippingAddress: {
       firstName: { type: String, required: true },
@@ -62,6 +62,7 @@ const orderSchema = new Schema<IOrder>(
       default: "pending",
     },
     stripeSessionId: { type: String, default: null },
+    stripePaymentIntentId: { type: String, default: null },
     orderStatus: {
       type: String,
       enum: ["processing", "shipped", "delivered", "cancelled"],
@@ -69,6 +70,18 @@ const orderSchema = new Schema<IOrder>(
     },
   },
   { timestamps: true },
+);
+
+// 1. COMPOUND INDEX: Lightning-fast lookups for a specific customer's paid orders
+orderSchema.index({ email: 1, paymentStatus: 1 });
+
+// 2. TTL INDEX: Auto-delete "pending" orders after 3 days to protect against bot spam
+orderSchema.index(
+  { createdAt: 1 },
+  {
+    expireAfterSeconds: 3 * 24 * 60 * 60, // 3 days in seconds
+    partialFilterExpression: { paymentStatus: "pending" },
+  },
 );
 
 export const Order = model<IOrder>("Order", orderSchema);

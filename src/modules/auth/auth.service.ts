@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import type { ForgotPasswordDTO, LoginDTO, ResetPasswordDTO } from "./auth.schema.js";
 import { Admin } from "../admin/admin.model.js"; // Updated import!
-import { getPasswordResetTemplate } from "../../templates/auth.templates.js";
+import { getPasswordResetTemplate } from "../../templates/auth.template.js";
 import { emailQueue } from "../../config/queue.js";
 
 // Helper function to generate tokens

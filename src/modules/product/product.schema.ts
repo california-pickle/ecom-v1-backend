@@ -5,10 +5,15 @@ const stockStatusEnum = z.enum(["IN_STOCK", "OUT_OF_STOCK", "LOW_STOCK", "UPCOMI
 });
 
 const variantSchema = z.object({
+  _id: z.string().optional(),
   sizeLabel: z.string().min(1, { message: "Size label is required (e.g., '60ML')" }),
   subtitle: z.string().optional(),
   price: z.number().positive({ message: "Price must be greater than zero" }),
   imageUrl: z.url({ message: "Must be a valid image URL" }),
+
+  // Required to track and delete old images from Cloudinary!
+  imagePublicId: z.string().min(1, { message: "Cloudinary Public ID is required" }),
+
   stock: z.number().int().nonnegative().default(0),
   stockStatus: stockStatusEnum.default("UPCOMING"),
   badge: z.string().optional(),
@@ -27,13 +32,13 @@ export const createProductSchema = z.object({
   description: z.string().min(10, { message: "Description must be at least 10 characters" }),
   performanceMetrics: z.array(z.string()).default([]),
   isActive: z.boolean().default(false),
-  variants: z.array(variantSchema).min(1, { message: "You must add at least one size variant" }),
+  variants: z.array(variantSchema).length(3, { message: "A product must have exactly 3 size variants" }),
 });
 
 export const updateProductSchema = createProductSchema.partial();
 
 export const productIdParamSchema = z.object({
-  id: z.string({ message: "Product ID must be a valid string" }),
+  id: z.string().length(24, { message: "Product ID must be a valid 24-character MongoDB string" }),
 });
 
 export type CreateProductDTO = z.infer<typeof createProductSchema>;

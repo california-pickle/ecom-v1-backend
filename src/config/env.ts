@@ -9,15 +9,18 @@ if (process.env.NODE_ENV !== "production") {
 // 1. Define the exact shape your .env file MUST have
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  PORT: z.string().default("5000"),
   MONGODB_URI: z.string().min(1, { message: "MongoDB URI is required" }),
   //   FRONTEND_URL: z.string().url({ message: "Frontend URL must be a valid URL" }),
   JWT_ACCESS_SECRET: z.string().min(10, { message: "Access secret must be at least 10 chars" }),
   JWT_REFRESH_SECRET: z.string().min(10, { message: "Refresh secret must be at least 10 chars" }),
   ZEPTOMAIL_API_KEY: z.string().min(1, { message: "Zepto Mail API_KEY is required" }),
+  REDIS_URI: z.string().min(1, { message: "Redis URI must be a valid URL" }),
+  CLOUDINARY_CLOUD_NAME: z.string().min(1, { message: "Cloudinary cloud name is required" }),
+  CLOUDINARY_API_KEY: z.string().min(1, { message: "Cloudinary API_KEY is required" }),
+  CLOUDINARY_API_SECRET: z.string().min(1, { message: "Cloudinary API_SECRET is required" }),
   STRIPE_SECRET_KEY: z.string().min(1, { message: "Stripe API_KEY is required" }),
   STRIPE_WEBHOOK_SECRET: z.string().min(1, { message: "Stripe WEBHOOK_SECRET is required" }),
-  REDIS_URI: z.string().min(1, { message: "Redis URI must be a valid URL" }),
+  PORT: z.string().default("5000"),
 });
 
 // 2. Validate the environment variables

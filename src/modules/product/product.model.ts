@@ -6,6 +6,7 @@ export interface IVariant {
   subtitle?: string;
   price: number;
   imageUrl: string;
+  imagePublicId: string;
   stock: number;
   stockStatus: "IN_STOCK" | "OUT_OF_STOCK" | "LOW_STOCK" | "UPCOMING";
   badge?: string;
@@ -18,7 +19,8 @@ export interface IProduct extends Document {
   description: string;
   performanceMetrics: string[];
   isActive: boolean;
-  variants: IVariant[]; // Array of size options
+  isDeleted: boolean;
+  variants: IVariant[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +30,7 @@ const variantSchema = new Schema<IVariant>({
   subtitle: { type: String },
   price: { type: Number, required: true },
   imageUrl: { type: String, required: true },
+  imagePublicId: { type: String, required: true },
   stock: { type: Number, default: 0 },
   stockStatus: {
     type: String,
@@ -45,7 +48,8 @@ const productSchema = new Schema<IProduct>(
     description: { type: String, required: true },
     performanceMetrics: { type: [String], default: [] },
     isActive: { type: Boolean, default: false },
-    variants: { type: [variantSchema], required: true }, // Embeds the variants
+    isDeleted: { type: Boolean, default: false },
+    variants: { type: [variantSchema], required: true },
   },
   { timestamps: true },
 );
