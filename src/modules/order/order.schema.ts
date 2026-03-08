@@ -19,7 +19,7 @@ export const createOrderSchema = z.object({
       z.object({
         productId: z.string().length(24, { message: "Invalid product ID format" }),
         variantId: z.string().length(24, { message: "Invalid variant ID format" }),
-        quantity: z.number().int().positive({ message: "Quantity must be at least 1" }),
+        quantity: z.number().int().min(1, { message: "Quantity must be at least 1" }).max(20, { message: "Max 20 units per item" }),
       }),
     )
     .min(1, { message: "Order must contain at least one item" }),

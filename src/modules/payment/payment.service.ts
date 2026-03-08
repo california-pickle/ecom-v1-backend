@@ -7,9 +7,7 @@ import { emailQueue } from "../../config/queue.js";
 import { getOrderReceiptTemplate } from "../../templates/order.template.js";
 
 // 1. Initialize Stripe
-export const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16" as any,
-});
+export const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
 // 2. Generate the Secure Checkout Page with Shipping Fees
 export async function createCheckoutSession(order: any) {
@@ -104,9 +102,21 @@ export async function handleStripeWebhook(signature: string, rawBody: Buffer) {
           return { received: true };
         }
 
+        // Fraud check: product subtotal + shipping selected on Stripe must match what was actually charged
+        const productSubtotalCents = Math.round(order.totalAmount * 100);
+        const shippingCents = session.total_details?.amount_shipping ?? 0;
+        const expectedTotal = productSubtotalCents + shippingCents;
+
+        if (session.amount_total !== expectedTotal) {
+          throw new Error(
+            `Payment amount mismatch for order ${orderId}: expected ${expectedTotal} cents, got ${session.amount_total} cents`,
+          );
+        }
+
         order.paymentStatus = "paid";
         order.orderStatus = "processing";
         order.stripePaymentIntentId = session.payment_intent as string;
+        order.shippingCost = shippingCents / 100;
         await order.save({ session: dbSession });
 
         for (const item of order.items) {
@@ -148,6 +158,7 @@ export async function handleStripeWebhook(signature: string, rawBody: Buffer) {
           order.totalAmount,
           order.items,
           order.shippingAddress,
+          order.shippingCost,
         );
 
         await emailQueue.add("send-order-receipt", {

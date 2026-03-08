@@ -98,9 +98,32 @@ export async function getOrderBySessionId(sessionId: string) {
   return order;
 }
 
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  processing: ["shipped", "cancelled"],
+  shipped: ["delivered"],
+  delivered: [],
+  cancelled: [],
+  pending_payment: [],
+};
+
 export async function updateOrderStatus(id: string, status: "processing" | "shipped" | "delivered" | "cancelled") {
-  const order = await Order.findByIdAndUpdate(id, { orderStatus: status }, { new: true });
+  const order = await Order.findById(id);
   if (!order) throw new AppError("Order not found", 404);
+
+  if (order.paymentStatus !== "paid") {
+    throw new AppError("Cannot update status on an unpaid order", 400);
+  }
+
+  const allowed = VALID_TRANSITIONS[order.orderStatus] ?? [];
+  if (!allowed.includes(status)) {
+    throw new AppError(
+      `Invalid transition: "${order.orderStatus}" → "${status}". Allowed: ${allowed.length ? allowed.join(", ") : "none (terminal state)"}`,
+      400,
+    );
+  }
+
+  order.orderStatus = status;
+  await order.save();
   return order;
 }
 

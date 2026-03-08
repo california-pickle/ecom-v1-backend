@@ -32,7 +32,7 @@ export async function createOrderHandler(req: Request, res: Response) {
     return res.status(201).json({
       message: "Order initialized, redirecting to payment...",
       checkoutUrl,
-      order,
+      orderId: order._id,
     });
   } catch (error: any) {
     if (error instanceof AppError) {

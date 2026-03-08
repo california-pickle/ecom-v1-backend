@@ -27,6 +27,7 @@ export interface IOrder extends Document {
   stripeSessionId?: string | null;
   stripePaymentIntentId?: string | null;
   checkoutUrl?: string | null;
+  shippingCost: number;
   orderStatus: "pending_payment" | "processing" | "shipped" | "delivered" | "cancelled";
   createdAt: Date;
   updatedAt: Date;
@@ -64,6 +65,7 @@ const orderSchema = new Schema<IOrder>(
     stripeSessionId: { type: String, default: null },
     stripePaymentIntentId: { type: String, default: null },
     checkoutUrl: { type: String, default: null },
+    shippingCost: { type: Number, default: 0 },
     orderStatus: {
       type: String,
       enum: ["pending_payment", "processing", "shipped", "delivered", "cancelled"],

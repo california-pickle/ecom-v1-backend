@@ -1,9 +1,10 @@
 export const getOrderReceiptTemplate = (
   firstName: string,
   orderId: string,
-  total: number,
+  subtotal: number,
   items: any[],
-  shippingAddress: any, // 👈 Added this!
+  shippingAddress: any,
+  shippingCost: number = 0,
 ) => {
   const currentYear = new Date().getFullYear();
   const headerGreen = "#8CE000";
@@ -99,15 +100,15 @@ Your payment is locked in. We're getting your gear ready to ship. Here is your o
   <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
     <tr>
       <td align="right" style="padding: 6px 0; font-size: 14px; color: #6b7280;">Subtotal:</td>
-      <td align="right" width="100" style="padding: 6px 0; font-size: 14px; color: #111827; font-weight: 600;">$${total.toFixed(2)}</td>
+      <td align="right" width="100" style="padding: 6px 0; font-size: 14px; color: #111827; font-weight: 600;">$${subtotal.toFixed(2)}</td>
     </tr>
     <tr>
       <td align="right" style="padding: 6px 0; font-size: 14px; color: #6b7280;">Shipping:</td>
-      <td align="right" width="100" style="padding: 6px 0; font-size: 14px; color: #111827; font-weight: 600;">Free</td>
+      <td align="right" width="100" style="padding: 6px 0; font-size: 14px; color: #111827; font-weight: 600;">$${shippingCost.toFixed(2)}</td>
     </tr>
     <tr>
       <td align="right" style="padding: 16px 0 0; font-size: 18px; font-weight: 900; color: #111827; border-top: 2px solid #111827;">TOTAL PAID:</td>
-      <td align="right" width="100" style="padding: 16px 0 0; font-size: 18px; font-weight: 900; color: #111827; border-top: 2px solid #111827;">$${total.toFixed(2)}</td>
+      <td align="right" width="100" style="padding: 16px 0 0; font-size: 18px; font-weight: 900; color: #111827; border-top: 2px solid #111827;">$${(subtotal + shippingCost).toFixed(2)}</td>
     </tr>
   </table>
 
