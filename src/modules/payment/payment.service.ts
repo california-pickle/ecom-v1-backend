@@ -39,8 +39,8 @@ export async function createCheckoutSession(order: any) {
     customer_email: order.email,
     line_items: lineItems,
     client_reference_id: order._id.toString(),
-    success_url: `http://localhost:${env.PORT}/api/order/session/{CHECKOUT_SESSION_ID}`,
-    cancel_url: `http://localhost:${env.PORT}/api/order/session/{CHECKOUT_SESSION_ID}`,
+    success_url: `${env.FRONTEND_URL}/order/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${env.FRONTEND_URL}/checkout`,
   });
 
   order.stripeSessionId = session.id;

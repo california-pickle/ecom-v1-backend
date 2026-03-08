@@ -1,37 +1,52 @@
 import { z } from "zod";
 import dotenv from "dotenv";
 
-// Load the .env file if we are not in production
 if (process.env.NODE_ENV !== "production") {
   dotenv.config();
 }
 
-// 1. Define the exact shape your .env file MUST have
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  MONGODB_URI: z.string().min(1, { message: "MongoDB URI is required" }),
-  //   FRONTEND_URL: z.string().url({ message: "Frontend URL must be a valid URL" }),
-  JWT_ACCESS_SECRET: z.string().min(10, { message: "Access secret must be at least 10 chars" }),
-  JWT_REFRESH_SECRET: z.string().min(10, { message: "Refresh secret must be at least 10 chars" }),
-  ZEPTOMAIL_API_KEY: z.string().min(1, { message: "Zepto Mail API_KEY is required" }),
-  REDIS_URI: z.string().min(1, { message: "Redis URI must be a valid URL" }),
-  CLOUDINARY_CLOUD_NAME: z.string().min(1, { message: "Cloudinary cloud name is required" }),
-  CLOUDINARY_API_KEY: z.string().min(1, { message: "Cloudinary API_KEY is required" }),
-  CLOUDINARY_API_SECRET: z.string().min(1, { message: "Cloudinary API_SECRET is required" }),
-  STRIPE_SECRET_KEY: z.string().min(1, { message: "Stripe API_KEY is required" }),
-  STRIPE_WEBHOOK_SECRET: z.string().min(1, { message: "Stripe WEBHOOK_SECRET is required" }),
-  SHIPPO_API_KEY: z.string().min(1, { message: "Shippo API_KEY is required" }),
+
+  // Database
+  MONGODB_URI: z.string().min(1, { message: "MONGODB_URI is required — get it from MongoDB Atlas > Connect > Drivers" }),
+
+  // Auth
+  JWT_ACCESS_SECRET: z.string().min(32, { message: "JWT_ACCESS_SECRET must be at least 32 characters — generate with: openssl rand -hex 32" }),
+  JWT_REFRESH_SECRET: z.string().min(32, { message: "JWT_REFRESH_SECRET must be at least 32 characters — generate with: openssl rand -hex 32" }),
+
+  // Email
+  ZEPTOMAIL_API_KEY: z.string().min(1, { message: "ZEPTOMAIL_API_KEY is required — get it from ZeptoMail > Mail Agents > API" }),
+
+  // Queue
+  REDIS_URI: z.string().min(1, { message: "REDIS_URI is required — get it from Upstash > Redis > Connect > Node.js (ioredis)" }),
+
+  // Images
+  CLOUDINARY_CLOUD_NAME: z.string().min(1, { message: "CLOUDINARY_CLOUD_NAME is required — get it from Cloudinary Dashboard > Settings" }),
+  CLOUDINARY_API_KEY: z.string().min(1, { message: "CLOUDINARY_API_KEY is required — get it from Cloudinary Dashboard > Settings > API Keys" }),
+  CLOUDINARY_API_SECRET: z.string().min(1, { message: "CLOUDINARY_API_SECRET is required — get it from Cloudinary Dashboard > Settings > API Keys" }),
+
+  // Payments
+  STRIPE_SECRET_KEY: z.string().min(1, { message: "STRIPE_SECRET_KEY is required — get it from Stripe Dashboard > Developers > API Keys" }),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1, { message: "STRIPE_WEBHOOK_SECRET is required — get it from Stripe Dashboard > Developers > Webhooks > Signing Secret" }),
+
+  // Shipping
+  SHIPPO_API_KEY: z.string().min(1, { message: "SHIPPO_API_KEY is required — get it from Shippo Dashboard > Settings > API" }),
+
+  // App
+  FRONTEND_URL: z.url({ message: "FRONTEND_URL must be a valid URL — e.g. https://thecaliforniapickle.com (no trailing slash)" }),
   PORT: z.string().default("5000"),
 });
 
-// 2. Validate the environment variables
 const parsedEnv = envSchema.safeParse(process.env);
 
 if (!parsedEnv.success) {
-  console.error("❌ Invalid environment variables:");
-  console.error(parsedEnv.error.issues);
-  process.exit(1); // Kill the app immediately!
+  console.error("\n❌ Server startup failed — missing or invalid environment variables:\n");
+  parsedEnv.error.issues.forEach((issue) => {
+    console.error(`  • ${issue.path.join(".")}: ${issue.message}`);
+  });
+  console.error("\nFix the above variables in your .env file and restart the server.\n");
+  process.exit(1);
 }
 
-// 3. Export the clean, validated, strictly-typed variables
 export const env = parsedEnv.data;

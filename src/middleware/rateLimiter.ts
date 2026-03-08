@@ -43,7 +43,7 @@ export const globalLimiter = rateLimit({
 // to prevent brute-force password guessing.
 export const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // Only 5 login attempts per hour per IP
+  max: 8, // Only 8 login attempts per hour per IP
   message: {
     error: "Too many login attempts. Try again in an hour.",
   },

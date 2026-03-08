@@ -20,10 +20,11 @@ export async function getArchivedProducts() {
   return await Product.find({ isDeleted: true }).sort({ createdAt: -1 });
 }
 
-// Products are always created as inactive (upcoming) — use activateProduct() to go live
+// First product ever is auto-activated — subsequent products are created inactive
 export async function createProduct(data: CreateProductDTO) {
   const cleanedData = cleanData(data);
-  cleanedData.isActive = false;
+  const existingCount = await Product.countDocuments({ isDeleted: false });
+  cleanedData.isActive = existingCount === 0;
 
   try {
     const createdProducts = await Product.create([cleanedData]);

@@ -93,9 +93,9 @@ export async function getShippingRates(
     throw new Error(`Shippo error: ${data.messages?.map((m: any) => m.text).join(", ")}`);
   }
 
-  // Return only active, non-expired rates with all info frontend needs
+  // Return all rates — object_state is no longer returned by Shippo API
   const rates = (data.rates || [])
-    .filter((r: any) => r.object_state === "VALID")
+    .filter((r: any) => r.amount && parseFloat(r.amount) > 0)
     .map((r: any) => ({
       rateId: r.object_id,
       carrier: r.provider,
