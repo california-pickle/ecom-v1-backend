@@ -127,6 +127,11 @@ export async function updateOrderStatus(id: string, status: "processing" | "ship
   return order;
 }
 
+// Returns all paid orders for a specific customer email (admin order history view)
+export async function getOrdersByEmail(email: string) {
+  return await Order.find({ email: email.toLowerCase().trim(), paymentStatus: "paid" }).sort({ createdAt: -1 });
+}
+
 // Returns all unpaid orders (pending + failed) — used for admin call list
 export async function getUnpaidOrders() {
   return await Order.find({ paymentStatus: { $in: ["pending", "failed"] } })

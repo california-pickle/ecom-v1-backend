@@ -84,6 +84,20 @@ export async function getOrderBySessionHandler(req: Request, res: Response) {
   }
 }
 
+export async function getOrdersByEmailHandler(req: Request, res: Response) {
+  try {
+    const { email } = req.query;
+    if (!email || typeof email !== "string") {
+      return res.status(400).json({ message: "Email query param is required" });
+    }
+    const orders = await OrderService.getOrdersByEmail(email);
+    return res.status(200).json({ data: orders, total: orders.length });
+  } catch (error) {
+    console.error("Get Orders By Email Error:", error);
+    return res.status(500).json({ message: "Failed to fetch orders for this customer" });
+  }
+}
+
 export async function getUnpaidOrdersHandler(req: Request, res: Response) {
   try {
     const orders = await OrderService.getUnpaidOrders();

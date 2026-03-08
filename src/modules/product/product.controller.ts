@@ -19,8 +19,8 @@ export async function getStorefrontProductHandler(req: Request, res: Response) {
     const product = await ProductService.getStorefrontProduct();
     return res.status(200).json(product);
   } catch (error: any) {
-    if (error.message === "NOT_FOUND") {
-      return res.status(404).json({ message: "Storefront is currently in 'Coming Soon' mode (no active product)." });
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ message: error.message });
     }
     return res.status(500).json({ message: "Failed to fetch storefront product" });
   }

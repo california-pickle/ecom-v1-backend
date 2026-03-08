@@ -75,14 +75,23 @@ const orderSchema = new Schema<IOrder>(
   { timestamps: true },
 );
 
-// 1. COMPOUND INDEX: Lightning-fast lookups for a specific customer's paid orders
+// 1. Customer lookup — fast per-email order history filtered by payment status
 orderSchema.index({ email: 1, paymentStatus: 1 });
 
-// 2. TTL INDEX: Auto-delete "pending" orders after 3 days to protect against bot spam
+// 2. Admin dashboard sort — getAllOrders sorts by createdAt, needs this to avoid full scan
+orderSchema.index({ createdAt: -1 });
+
+// 3. Unpaid orders query — getUnpaidOrders filters by paymentStatus + sorts by createdAt
+orderSchema.index({ paymentStatus: 1, createdAt: -1 });
+
+// 4. Admin status filtering — future dashboard filter by orderStatus
+orderSchema.index({ orderStatus: 1 });
+
+// 5. TTL INDEX — auto-delete pending orders after 3 days (bot/spam protection)
 orderSchema.index(
   { createdAt: 1 },
   {
-    expireAfterSeconds: 3 * 24 * 60 * 60, // 3 days in seconds
+    expireAfterSeconds: 3 * 24 * 60 * 60,
     partialFilterExpression: { paymentStatus: "pending" },
   },
 );

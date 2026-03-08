@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createOrderHandler,
   getAllOrdersHandler,
+  getOrdersByEmailHandler,
   getOrderBySessionHandler,
   updateOrderStatusHandler,
   getUnpaidOrdersHandler,
@@ -21,6 +22,7 @@ router.get("/session/:sessionId", getOrderBySessionHandler);
 // Admin Routes (Dashboard)
 // ==========================================
 router.get("/all", requireAuth, getAllOrdersHandler);
+router.get("/by-email", requireAuth, getOrdersByEmailHandler);
 router.get("/unpaid", requireAuth, getUnpaidOrdersHandler);
 router.post("/:id/remind", requireAuth, sendManualReminderHandler);
 router.put("/:id/status", requireAuth, updateOrderStatusHandler);
