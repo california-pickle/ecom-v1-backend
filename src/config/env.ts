@@ -55,8 +55,6 @@ const envSchema = z.object({
   SHIPPO_API_KEY: z
     .string()
     .min(1, { message: "SHIPPO_API_KEY is required — get it from Shippo Dashboard > Settings > API" }),
-  SHIPPO_WEBHOOK_SECRET: z.string().optional(),
-
   // App
   FRONTEND_URL: z.url({
     message: "FRONTEND_URL must be a valid URL — e.g. https://thecaliforniapickle.com (no trailing slash)",
