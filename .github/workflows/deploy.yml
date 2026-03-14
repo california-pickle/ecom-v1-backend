@@ -20,7 +20,8 @@ jobs:
             set -e
             echo "▶ Pulling latest backend..."
             cd ~/thecaliforniapickle/ecom-v1-backend
-            git pull origin main
+            git fetch origin
+            git reset --hard origin/main
 
             echo "▶ Installing all dependencies..."
             npm ci
