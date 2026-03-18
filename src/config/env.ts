@@ -65,6 +65,9 @@ const envSchema = z.object({
   API_URL: z.url({
     message: "API_URL must be a valid URL — e.g. https://api.thecaliforniapickle.com (no trailing slash)",
   }).default("https://api.thecaliforniapickle.com"),
+  PROXY_SECRET: z.string().min(16, {
+    message: "PROXY_SECRET must be at least 16 chars — generate with: openssl rand -hex 32. Shared between frontend proxy and backend to prevent direct API abuse.",
+  }),
   PORT: z.string().default("5000"),
 });
 

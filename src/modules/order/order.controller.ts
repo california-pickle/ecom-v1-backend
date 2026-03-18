@@ -12,6 +12,12 @@ import { env } from "../../config/env.js";
 
 export async function createOrderHandler(req: Request, res: Response) {
   try {
+    // Only the frontend proxy is allowed to create orders (prevents direct API discount manipulation)
+    const proxySecret = process.env.PROXY_SECRET;
+    if (proxySecret && req.headers["x-proxy-secret"] !== proxySecret) {
+      return res.status(403).json({ message: "Direct order creation is not allowed" });
+    }
+
     const parsed = createOrderSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ errors: parsed.error.issues });
 
