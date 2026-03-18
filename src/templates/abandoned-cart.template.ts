@@ -3,6 +3,8 @@ export const getAbandonedCartTemplate = (
   items: any[],
   total: number,
   resumeUrl: string,
+  shippingCost: number = 0,
+  discountAmount: number = 0,
 ) => {
   const currentYear = new Date().getFullYear();
   const headerGreen = "#8CE000";
@@ -89,12 +91,22 @@ You got close — your order is still sitting there waiting on you. Your cart is
   </table>
 
   <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+    ${discountAmount > 0 ? `
     <tr>
-      <td align="right" style="padding: 12px 0 0; font-size: 17px; font-weight: 900; color: #111827; border-top: 2px solid #111827; font-family:'Arial Black',Impact,sans-serif; text-transform:uppercase;">
+      <td style="padding: 6px 0; font-size: 13px; color: #6b7280;">Discount</td>
+      <td align="right" style="padding: 6px 0; font-size: 13px; color: #16a34a; font-weight: 700;">-$${discountAmount.toFixed(2)}</td>
+    </tr>` : ""}
+    ${shippingCost > 0 ? `
+    <tr>
+      <td style="padding: 6px 0; font-size: 13px; color: #6b7280;">Shipping</td>
+      <td align="right" style="padding: 6px 0; font-size: 13px; color: #111827; font-weight: 700;">$${shippingCost.toFixed(2)}</td>
+    </tr>` : ""}
+    <tr>
+      <td style="padding: 12px 0 0; font-size: 17px; font-weight: 900; color: #111827; border-top: 2px solid #111827; font-family:'Arial Black',Impact,sans-serif; text-transform:uppercase;">
         Total:
       </td>
-      <td align="right" width="100" style="padding: 12px 0 0; font-size: 17px; font-weight: 900; color: #111827; border-top: 2px solid #111827;">
-        $${total.toFixed(2)}
+      <td align="right" style="padding: 12px 0 0; font-size: 17px; font-weight: 900; color: #111827; border-top: 2px solid #111827;">
+        $${(total + shippingCost).toFixed(2)}
       </td>
     </tr>
   </table>

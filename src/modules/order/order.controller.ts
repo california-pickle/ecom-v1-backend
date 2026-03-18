@@ -146,6 +146,8 @@ export async function sendManualReminderHandler(req: Request, res: Response) {
       order.items,
       order.totalAmount,
       resumeUrl,
+      order.shippingCost ?? 0,
+      order.discountAmount ?? 0,
     );
 
     await emailQueue.add("send-manual-reminder", {
