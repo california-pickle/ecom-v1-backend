@@ -22,13 +22,22 @@ const ratesRequestSchema = z.object({
 });
 
 export async function shippoWebhookHandler(req: Request, res: Response) {
+  // Verify self-generated token passed as ?token=... in the Shippo webhook URL
+  const token = (req.query.token as string | undefined) ?? "";
+  if (!token || token !== process.env.SHIPPO_WEBHOOK_SECRET) {
+    console.warn("Shippo webhook: unauthorized attempt blocked");
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  // Respond 200 immediately — Shippo requires a 2xx within 3 seconds
+  res.status(200).json({ received: true });
+
+  // Process asynchronously after response is sent
   try {
     const payload = JSON.parse((req.body as Buffer).toString());
     await handleShippoWebhook(payload);
-    return res.status(200).json({ received: true });
   } catch (error: any) {
-    console.error("Shippo Webhook Error:", error.message);
-    return res.status(500).json({ message: "Webhook processing failed" });
+    console.error("Shippo Webhook processing error:", error.message);
   }
 }
 
