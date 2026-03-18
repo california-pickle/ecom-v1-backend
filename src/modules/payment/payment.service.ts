@@ -6,6 +6,7 @@ import { Product } from "../product/product.model.js";
 import { emailQueue } from "../../config/queue.js";
 import { getOrderReceiptTemplate } from "../../templates/order.template.js";
 import { getShippingTemplate } from "../../templates/shipping.template.js";
+import { getRefundTemplate } from "../../templates/refund.template.js";
 import { purchaseShippingLabel } from "../shipping/shipping.service.js";
 
 export const stripe = new Stripe(env.STRIPE_SECRET_KEY);
@@ -125,11 +126,18 @@ export async function handleStripeWebhook(signature: string, rawBody: Buffer) {
               console.log(`💸 Auto-refunded order ${orderId} — ${item.name} (${item.sizeLabel}) out of stock`);
             }
             await Order.findByIdAndUpdate(orderId, { paymentStatus: "failed", orderStatus: "cancelled" });
+            const refundAmount = order.totalAmount + order.shippingCost;
+            const refundHtml = getRefundTemplate(
+              order.shippingAddress.firstName,
+              item.name,
+              item.sizeLabel,
+              refundAmount,
+            );
             await emailQueue.add("send-out-of-stock-refund", {
               type: "ORDER_CONFIRMATION",
               to: order.email,
               subject: "We're sorry — your order has been refunded | The California Pickle",
-              html: `<p>Hi ${order.shippingAddress.firstName},</p><p>We're sorry — by the time your payment was processed, <strong>${item.name} (${item.sizeLabel})</strong> went out of stock. Your payment of <strong>$${(order.totalAmount + order.shippingCost).toFixed(2)}</strong> has been automatically refunded. Refunds typically appear within 5–10 business days. We apologize for the inconvenience.</p><p>— The California Pickle Team</p>`,
+              html: refundHtml,
             });
             return { received: true };
           }
