@@ -7,6 +7,7 @@ import {
   updateOrderStatusHandler,
   getUnpaidOrdersHandler,
   sendManualReminderHandler,
+  resumeOrderHandler,
 } from "./order.controller.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
 
@@ -17,6 +18,7 @@ const router = Router();
 // ==========================================
 router.post("/checkout", createOrderHandler);
 router.get("/session/:sessionId", getOrderBySessionHandler);
+router.get("/:id/resume", resumeOrderHandler);
 
 // ==========================================
 // Admin Routes (Dashboard)

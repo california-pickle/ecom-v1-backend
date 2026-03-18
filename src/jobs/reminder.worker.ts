@@ -4,6 +4,7 @@ import { emailQueue } from "../config/queue.js";
 import { Order } from "../modules/order/order.model.js";
 import { Product } from "../modules/product/product.model.js";
 import { getAbandonedCartTemplate } from "../templates/abandoned-cart.template.js";
+import { env } from "../config/env.js";
 
 interface ReminderJobData {
   orderId: string;
@@ -40,7 +41,8 @@ export const reminderWorker = new Worker<ReminderJobData>(
       }
     }
 
-    const html = getAbandonedCartTemplate(firstName, order.items, order.totalAmount, order.checkoutUrl);
+    const resumeUrl = `${env.API_URL}/api/order/${orderId}/resume`;
+    const html = getAbandonedCartTemplate(firstName, order.items, order.totalAmount, resumeUrl);
 
     await emailQueue.add("send-abandoned-cart", {
       type: "ABANDONED_CART",

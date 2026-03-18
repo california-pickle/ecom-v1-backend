@@ -6,7 +6,9 @@ import { AppError } from "../../middleware/errorHandler.js";
 import { reminderQueue, emailQueue } from "../../config/queue.js";
 import { getAbandonedCartTemplate } from "../../templates/abandoned-cart.template.js";
 import { Order } from "./order.model.js";
+import { Product } from "../product/product.model.js";
 import { verifyShippoRate } from "../shipping/shipping.service.js";
+import { env } from "../../config/env.js";
 
 export async function createOrderHandler(req: Request, res: Response) {
   try {
@@ -132,24 +134,12 @@ export async function sendManualReminderHandler(req: Request, res: Response) {
       return res.status(400).json({ message: "Order is already paid — no reminder needed" });
     }
 
-    let checkoutUrl = order.checkoutUrl;
-
-    // Session expired or missing — generate a fresh Stripe checkout session
-    if (!checkoutUrl || order.paymentStatus === "failed") {
-      checkoutUrl = await PaymentService.createCheckoutSession(order);
-      // Reset order back to pending so the new session is tracked properly
-      await Order.findByIdAndUpdate(order._id, {
-        paymentStatus: "pending",
-        orderStatus: "pending_payment",
-      });
-      console.log(`🔄 Fresh checkout session created for expired order ${order._id}`);
-    }
-
+    const resumeUrl = `${env.API_URL}/api/order/${order._id}/resume`;
     const html = getAbandonedCartTemplate(
       order.shippingAddress.firstName,
       order.items,
       order.totalAmount,
-      checkoutUrl!,
+      resumeUrl,
     );
 
     await emailQueue.add("send-manual-reminder", {
@@ -167,6 +157,45 @@ export async function sendManualReminderHandler(req: Request, res: Response) {
     }
     console.error("Send Manual Reminder Error:", error);
     return res.status(500).json({ message: "Failed to send reminder" });
+  }
+}
+
+// Public — called when customer clicks "Complete My Order" in reminder email.
+// Checks stock before redirecting to Stripe — prevents paying for sold-out items.
+export async function resumeOrderHandler(req: Request, res: Response) {
+  const outOfStockUrl = `${env.FRONTEND_URL}/checkout/out-of-stock`;
+
+  try {
+    const paramsParsed = orderIdParamSchema.safeParse(req.params);
+    if (!paramsParsed.success) return res.redirect(outOfStockUrl);
+
+    const order = await OrderService.getOrderById(paramsParsed.data.id);
+
+    // Already paid — send to order confirmation
+    if (order.paymentStatus === "paid") {
+      return res.redirect(`${env.FRONTEND_URL}/order/session/${order.stripeSessionId}`);
+    }
+
+    // Check stock for all items before touching Stripe
+    for (const item of order.items) {
+      const product = await Product.findOne({ _id: item.productId, "variants._id": item.variantId });
+      const variant = product?.variants.find((v) => v._id?.toString() === item.variantId.toString());
+      if (!variant || variant.stock < item.quantity) {
+        console.log(`⚠️ Resume blocked for order ${order._id} — ${item.name} (${item.sizeLabel}) out of stock`);
+        return res.redirect(outOfStockUrl);
+      }
+    }
+
+    // Stock ok — get a valid checkout URL (regenerate if session expired)
+    let checkoutUrl = order.checkoutUrl;
+    if (!checkoutUrl || order.paymentStatus === "failed") {
+      checkoutUrl = await PaymentService.createCheckoutSession(order);
+      await Order.findByIdAndUpdate(order._id, { paymentStatus: "pending", orderStatus: "pending_payment" });
+    }
+
+    return res.redirect(checkoutUrl!);
+  } catch {
+    return res.redirect(outOfStockUrl);
   }
 }
 

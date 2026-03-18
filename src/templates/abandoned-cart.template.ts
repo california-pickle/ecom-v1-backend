@@ -2,7 +2,7 @@ export const getAbandonedCartTemplate = (
   firstName: string,
   items: any[],
   total: number,
-  checkoutUrl: string,
+  resumeUrl: string,
 ) => {
   const currentYear = new Date().getFullYear();
   const headerGreen = "#8CE000";
@@ -105,7 +105,7 @@ You got close — your order is still sitting there waiting on you. Your cart is
 <table cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom: 30px;">
 <tr>
 <td>
-  <a href="${checkoutUrl}"
+  <a href="${resumeUrl}"
     class="button"
     style="
       display:inline-block;
@@ -128,7 +128,7 @@ You got close — your order is still sitting there waiting on you. Your cart is
 </table>
 
 <p style="margin:0; font-size:13px; line-height:20px; color:#9ca3af; font-style:italic;">
-* This checkout link expires within 24 hours of when your order was placed. If it's no longer active, just head back to the site and place a new order.
+* Clicking the button above checks availability before redirecting you to payment. If the item has sold out, you will be notified immediately.
 </p>
 
 </td>

@@ -62,6 +62,9 @@ const envSchema = z.object({
   FRONTEND_URL: z.url({
     message: "FRONTEND_URL must be a valid URL — e.g. https://thecaliforniapickle.com (no trailing slash)",
   }),
+  API_URL: z.url({
+    message: "API_URL must be a valid URL — e.g. https://api.thecaliforniapickle.com (no trailing slash)",
+  }).default("https://api.thecaliforniapickle.com"),
   PORT: z.string().default("5000"),
 });
 
