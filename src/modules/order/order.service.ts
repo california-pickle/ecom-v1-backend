@@ -2,6 +2,7 @@ import { Product } from "../product/product.model.js";
 import { Order } from "./order.model.js";
 import type { CreateOrderDTO } from "./order.schema.js";
 import { AppError } from "../../middleware/errorHandler.js";
+import { validateCoupon } from "../coupon/coupon.service.js";
 
 const cleanData = <T>(data: T): any => JSON.parse(JSON.stringify(data));
 
@@ -56,11 +57,27 @@ export async function createPendingOrder(data: CreateOrderDTO) {
     calculatedTotal += variant.price * item.quantity;
   }
 
+  let discountAmount = 0;
+  let discountCode: string | null = null;
+
+  if (data.couponCode) {
+    const result = await validateCoupon(data.couponCode);
+    if (!result.valid) {
+      throw new AppError(result.message, 400);
+    }
+    discountAmount = Math.round(calculatedTotal * result.coupon.discountPercent) / 100;
+    discountCode = result.coupon.code;
+  }
+
+  const finalTotal = calculatedTotal - discountAmount;
+
   const rawOrderData = {
     email: data.email,
     shippingAddress: data.shippingAddress,
     items: processedItems,
-    totalAmount: calculatedTotal,
+    totalAmount: finalTotal,
+    discountCode,
+    discountAmount,
     shippingCost: data.shippingCost,
     shippoRateId: data.shippoRateId,
     paymentStatus: "pending",

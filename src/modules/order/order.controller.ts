@@ -86,6 +86,8 @@ export async function getOrderBySessionHandler(req: Request, res: Response) {
       items: order.items,
       totalAmount: order.totalAmount,
       shippingCost: order.shippingCost,
+      discountAmount: order.discountAmount ?? 0,
+      discountCode: order.discountCode ?? null,
       paymentStatus: order.paymentStatus,
       orderStatus: order.orderStatus,
       customerFirstName: order.shippingAddress.firstName,
@@ -145,6 +147,7 @@ export async function sendManualReminderHandler(req: Request, res: Response) {
       order.totalAmount,
       resumeUrl,
       order.shippingCost ?? 0,
+      order.discountAmount ?? 0,
     );
 
     await emailQueue.add("send-manual-reminder", {

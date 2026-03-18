@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { env } from "../../config/env.js";
 import { Order } from "../order/order.model.js";
 import { Product } from "../product/product.model.js";
+import { Coupon } from "../coupon/coupon.model.js";
 import { emailQueue } from "../../config/queue.js";
 import { getOrderReceiptTemplate } from "../../templates/order.template.js";
 import { getShippingTemplate } from "../../templates/shipping.template.js";
@@ -35,6 +36,18 @@ export async function createCheckoutSession(order: any) {
     });
   }
 
+  let stripeCouponId: string | undefined;
+  if (order.discountAmount > 0) {
+    const stripeCoupon = await stripe.coupons.create({
+      amount_off: Math.round(order.discountAmount * 100),
+      currency: "usd",
+      duration: "once",
+      max_redemptions: 1,
+      name: order.discountCode ? `Coupon: ${order.discountCode}` : "Discount",
+    });
+    stripeCouponId = stripeCoupon.id;
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: order.email,
@@ -42,6 +55,7 @@ export async function createCheckoutSession(order: any) {
     client_reference_id: order._id.toString(),
     success_url: `${env.FRONTEND_URL}/order/session/{CHECKOUT_SESSION_ID}`,
     cancel_url: `${env.FRONTEND_URL}/checkout`,
+    ...(stripeCouponId ? { discounts: [{ coupon: stripeCouponId }] } : {}),
   });
 
   order.stripeSessionId = session.id;
@@ -153,6 +167,14 @@ export async function handleStripeWebhook(signature: string, rawBody: Buffer) {
         dbSession.endSession();
         console.log(`✅ Order ${orderId} paid & inventory updated.`);
 
+        // Atomically increment coupon usedCount — only if a coupon was applied
+        if (order.discountCode) {
+          await Coupon.findOneAndUpdate(
+            { code: order.discountCode, active: true },
+            { $inc: { usedCount: 1 } },
+          );
+        }
+
         // Send order confirmation email
         const receiptHtml = getOrderReceiptTemplate(
           order.shippingAddress.firstName,
@@ -161,6 +183,8 @@ export async function handleStripeWebhook(signature: string, rawBody: Buffer) {
           order.items,
           order.shippingAddress,
           order.shippingCost,
+          order.discountAmount ?? 0,
+          order.discountCode ?? undefined,
         );
 
         await emailQueue.add("send-order-receipt", {

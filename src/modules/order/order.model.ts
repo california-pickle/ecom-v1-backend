@@ -34,6 +34,8 @@ export interface IOrder extends Document {
   shippingLabelUrl?: string | null;
   shippingCarrier?: string | null;
   orderStatus: "pending_payment" | "processing" | "shipped" | "delivered" | "cancelled";
+  discountCode?: string | null;
+  discountAmount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -81,6 +83,8 @@ const orderSchema = new Schema<IOrder>(
       enum: ["pending_payment", "processing", "shipped", "delivered", "cancelled"],
       default: "pending_payment",
     },
+    discountCode: { type: String, default: null },
+    discountAmount: { type: Number, default: 0 },
   },
   { timestamps: true },
 );

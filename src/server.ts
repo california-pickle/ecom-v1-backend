@@ -22,6 +22,7 @@ import orderRoutes from "./modules/order/order.routes.js";
 import paymentRoutes from "./modules/payment/payment.routes.js";
 import settingsRoutes from "./modules/settings/settings.routes.js";
 import shippingRoutes from "./modules/shipping/shipping.routes.js";
+import couponRoutes from "./modules/coupon/coupon.routes.js";
 // redis and email import
 import "./config/redis.js";
 import "./jobs/email.worker.js";
@@ -70,6 +71,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/order", orderRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/shipping", shippingRoutes);
+app.use("/api/coupons", couponRoutes);
 // 5. Global error handler — re-applies CORS headers so browser sees real errors not CORS failures
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   const origin = req.headers.origin;
