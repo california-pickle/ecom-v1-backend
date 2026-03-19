@@ -6,6 +6,7 @@ import {
   getOrderBySessionHandler,
   updateOrderStatusHandler,
   getUnpaidOrdersHandler,
+  getCustomersHandler,
   sendManualReminderHandler,
   resumeOrderHandler,
 } from "./order.controller.js";
@@ -26,6 +27,7 @@ router.get("/:id/resume", resumeOrderHandler);
 router.get("/all", requireAuth, getAllOrdersHandler);
 router.get("/by-email", requireAuth, getOrdersByEmailHandler);
 router.get("/unpaid", requireAuth, getUnpaidOrdersHandler);
+router.get("/customers", requireAuth, getCustomersHandler);
 router.post("/:id/remind", requireAuth, sendManualReminderHandler);
 router.put("/:id/status", requireAuth, updateOrderStatusHandler);
 

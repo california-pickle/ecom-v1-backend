@@ -151,6 +151,35 @@ export async function getOrdersByEmail(email: string) {
   return await Order.find({ email: email.toLowerCase().trim(), paymentStatus: "paid" }).sort({ createdAt: -1 });
 }
 
+// Aggregated customer list — groups paid orders by email, returns summary per customer
+export async function getAggregatedCustomers(months?: number) {
+  const matchStage: any = { paymentStatus: "paid" };
+  if (months && months > 0) {
+    const since = new Date();
+    since.setMonth(since.getMonth() - months);
+    matchStage.createdAt = { $gte: since };
+  }
+
+  return await Order.aggregate([
+    { $match: matchStage },
+    { $sort: { createdAt: -1 } },
+    {
+      $group: {
+        _id: { $toLower: "$email" },
+        email: { $first: "$email" },
+        name: { $first: { $concat: ["$shippingAddress.firstName", " ", "$shippingAddress.lastName"] } },
+        city: { $first: "$shippingAddress.city" },
+        state: { $first: "$shippingAddress.state" },
+        totalOrders: { $sum: 1 },
+        totalSpent: { $sum: "$totalAmount" },
+        firstOrder: { $last: "$createdAt" },
+        lastOrder: { $first: "$createdAt" },
+      },
+    },
+    { $sort: { totalSpent: -1 } },
+  ]);
+}
+
 // Returns all unpaid orders (pending + failed) — used for admin call list
 export async function getUnpaidOrders() {
   return await Order.find({ paymentStatus: { $in: ["pending", "failed"] } })

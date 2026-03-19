@@ -129,6 +129,17 @@ export async function getUnpaidOrdersHandler(req: Request, res: Response) {
   }
 }
 
+export async function getCustomersHandler(req: Request, res: Response) {
+  try {
+    const months = parseInt(req.query.months as string) || 0;
+    const customers = await OrderService.getAggregatedCustomers(months || undefined);
+    return res.status(200).json(customers);
+  } catch (error) {
+    console.error("Get Customers Error:", error);
+    return res.status(500).json({ message: "Failed to fetch customers" });
+  }
+}
+
 export async function sendManualReminderHandler(req: Request, res: Response) {
   try {
     const paramsParsed = orderIdParamSchema.safeParse(req.params);
