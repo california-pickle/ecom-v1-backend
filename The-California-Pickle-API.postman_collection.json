@@ -1,0 +1,588 @@
+{
+  "info": {
+    "_postman_id": "the-california-pickle-api",
+    "name": "The California Pickle — API",
+    "description": "Full API collection for The California Pickle e-commerce platform.\n\n## Quick Start\n1. Set the `baseUrl` variable (default: `http://localhost:4200`)\n2. Run **Login** first — cookies are set automatically\n3. IDs from Create Product / Create Order are saved to variables automatically\n\n## Auth\nCookie-based (httpOnly). Postman handles cookies after Login.\n\n## Groups\n- 🔐 Auth — login, logout, refresh, password reset\n- 👤 Admin — profile\n- 📦 Products — CRUD, image uploads, activate/archive/restore\n- 🏷️ Coupons — create, list, validate, deactivate\n- 🚚 Shipping — rates + Shippo tracking webhook\n- 🛒 Orders — checkout, status, reminders, customer aggregation\n- 💳 Payments — Stripe webhook\n- ⚙️ Settings — ship-from address",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4200", "type": "string" },
+    { "key": "productId", "value": "", "type": "string" },
+    { "key": "variantId", "value": "", "type": "string" },
+    { "key": "orderId", "value": "", "type": "string" },
+    { "key": "sessionId", "value": "", "type": "string" },
+    { "key": "couponId", "value": "", "type": "string" },
+    { "key": "resetToken", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "description": "Cookie-based authentication. Login sets httpOnly cookies automatically.",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@thecaliforniapickle.com\",\n  \"password\": \"yourpassword\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "description": "Login as admin. Sets accessToken + refreshToken httpOnly cookies.\n\n**Rate limited:** 5 attempts per 15 minutes."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/refresh", "host": ["{{baseUrl}}"], "path": ["api", "auth", "refresh"] },
+            "description": "Uses refreshToken cookie to issue a new accessToken. No body needed."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "auth", "logout"] },
+            "description": "Clears auth cookies. Requires active session."
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@thecaliforniapickle.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/forgot-password", "host": ["{{baseUrl}}"], "path": ["api", "auth", "forgot-password"] },
+            "description": "Sends a password reset email with a token link.\n\n**Rate limited:** 5 per hour."
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"newPassword\": \"newSecurePassword123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["api", "auth", "reset-password"] },
+            "description": "Reset password using the token from the email link.\n\nToken expires in 15 minutes."
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 Admin",
+      "description": "Admin profile. Requires auth cookie.",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/admin/me", "host": ["{{baseUrl}}"], "path": ["api", "admin", "me"] },
+            "description": "Returns the authenticated admin's profile (email, name). Requires auth cookie."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Products",
+      "description": "Product CRUD, image uploads, activation, and archiving.",
+      "item": [
+        {
+          "name": "Public",
+          "item": [
+            {
+              "name": "Get Storefront Product",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/products/storefront", "host": ["{{baseUrl}}"], "path": ["api", "products", "storefront"] },
+                "description": "Public — returns the currently active product displayed to customers on the storefront."
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin",
+          "item": [
+            {
+              "name": "Get All Products",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/products/all", "host": ["{{baseUrl}}"], "path": ["api", "products", "all"] },
+                "description": "Returns all non-deleted products (active + inactive)."
+              }
+            },
+            {
+              "name": "Get Archived Products",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/products/archived", "host": ["{{baseUrl}}"], "path": ["api", "products", "archived"] },
+                "description": "Returns soft-deleted products available for restore."
+              }
+            },
+            {
+              "name": "Create Product",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.product && res.product._id) {",
+                      "    pm.collectionVariables.set('productId', res.product._id);",
+                      "    console.log('productId saved:', res.product._id);",
+                      "    if (res.product.variants && res.product.variants.length > 0) {",
+                      "        pm.collectionVariables.set('variantId', res.product.variants[0]._id);",
+                      "        console.log('variantId saved:', res.product.variants[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"California Pickle Classic\",\n  \"slug\": \"california-pickle-classic\",\n  \"flavor\": \"Dill\",\n  \"description\": \"The original California Pickle. Bold, briny, and built different.\",\n  \"performanceMetrics\": [\"High Electrolytes\", \"Zero Sugar\", \"All Natural\", \"Keto Friendly\"],\n  \"variants\": [\n    {\n      \"sizeLabel\": \"Small\",\n      \"subtitle\": \"2 fl oz × 12 Pack\",\n      \"price\": 24.99,\n      \"images\": [],\n      \"stock\": 100,\n      \"stockStatus\": \"IN_STOCK\",\n      \"badge\": \"Best Seller\",\n      \"weight\": 40,\n      \"length\": 8,\n      \"width\": 6,\n      \"height\": 4\n    },\n    {\n      \"sizeLabel\": \"Half Gallon\",\n      \"subtitle\": \"64 fl oz\",\n      \"price\": 18.99,\n      \"images\": [],\n      \"stock\": 75,\n      \"stockStatus\": \"IN_STOCK\",\n      \"weight\": 88,\n      \"length\": 6,\n      \"width\": 6,\n      \"height\": 10\n    },\n    {\n      \"sizeLabel\": \"1 Gallon\",\n      \"subtitle\": \"128 fl oz\",\n      \"price\": 32.99,\n      \"images\": [],\n      \"stock\": 50,\n      \"stockStatus\": \"IN_STOCK\",\n      \"weight\": 168,\n      \"length\": 8,\n      \"width\": 8,\n      \"height\": 12\n    }\n  ]\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{baseUrl}}/api/products", "host": ["{{baseUrl}}"], "path": ["api", "products"] },
+                "description": "Creates a new product (always inactive). Use Activate to go live.\n\nAuto-saves `productId` and `variantId` to collection variables.\n\n**stockStatus options:** IN_STOCK, OUT_OF_STOCK, LOW_STOCK, UPCOMING"
+              }
+            },
+            {
+              "name": "Update Product",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"California Pickle Classic — Updated\",\n  \"description\": \"Updated description.\",\n  \"variants\": [\n    {\n      \"sizeLabel\": \"Small\",\n      \"subtitle\": \"2 fl oz × 12 Pack\",\n      \"price\": 26.99,\n      \"images\": [],\n      \"stock\": 90,\n      \"stockStatus\": \"IN_STOCK\",\n      \"badge\": \"New Price\",\n      \"weight\": 40,\n      \"length\": 8,\n      \"width\": 6,\n      \"height\": 4\n    }\n  ]\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{baseUrl}}/api/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["api", "products", "{{productId}}"] },
+                "description": "Update product fields or variant details (price, stock, dimensions, images)."
+              }
+            },
+            {
+              "name": "Activate Product",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/products/{{productId}}/activate", "host": ["{{baseUrl}}"], "path": ["api", "products", "{{productId}}", "activate"] },
+                "description": "Makes this product live on the storefront. Deactivates all others atomically.\n\nBlocks if all variants are UPCOMING."
+              }
+            },
+            {
+              "name": "Delete Product (Soft)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["api", "products", "{{productId}}"] },
+                "description": "Soft deletes (archives) a product. Cannot delete the active product or the last remaining product."
+              }
+            },
+            {
+              "name": "Restore Archived Product",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/products/{{productId}}/restore", "host": ["{{baseUrl}}"], "path": ["api", "products", "{{productId}}", "restore"] },
+                "description": "Restores a soft-deleted product back to inactive state. Does NOT auto-activate."
+              }
+            },
+            {
+              "name": "Upload Single Image",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "image", "type": "file", "src": "", "description": "Single image file (jpg/png/webp, max 10MB)" }
+                  ]
+                },
+                "url": { "raw": "{{baseUrl}}/api/products/upload-image", "host": ["{{baseUrl}}"], "path": ["api", "products", "upload-image"] },
+                "description": "Uploads a single image to Cloudinary.\n\n**Returns:** `{ url, publicId }`"
+              }
+            },
+            {
+              "name": "Upload Multiple Images (up to 7)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "images", "type": "file", "src": "", "description": "Image 1 (jpg/png/webp, max 10MB)" },
+                    { "key": "images", "type": "file", "src": "", "description": "Image 2" },
+                    { "key": "images", "type": "file", "src": "", "description": "Image 3" }
+                  ]
+                },
+                "url": { "raw": "{{baseUrl}}/api/products/upload-images", "host": ["{{baseUrl}}"], "path": ["api", "products", "upload-images"] },
+                "description": "Uploads up to 7 images at once to Cloudinary.\n\n**Returns:** `{ images: [{ url, publicId }] }`"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🏷️ Coupons",
+      "description": "Discount coupon management. Admin creates coupons, customers validate at checkout.",
+      "item": [
+        {
+          "name": "Public",
+          "item": [
+            {
+              "name": "Validate Coupon (Checkout)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PICKLE10\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{baseUrl}}/api/coupons/validate", "host": ["{{baseUrl}}"], "path": ["api", "coupons", "validate"] },
+                "description": "Public — validates a coupon code at checkout.\n\nChecks: exists, active, not expired, uses remaining.\n\n**Returns:** `{ valid: true, coupon: { code, discountPercent } }` or `{ valid: false, message }`"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin",
+          "item": [
+            {
+              "name": "Get All Coupons",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/coupons", "host": ["{{baseUrl}}"], "path": ["api", "coupons"] },
+                "description": "Returns all coupons sorted newest first (active + expired + deactivated)."
+              }
+            },
+            {
+              "name": "Create Coupon",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res._id) {",
+                      "    pm.collectionVariables.set('couponId', res._id);",
+                      "    console.log('couponId saved:', res._id);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"PICKLE10\",\n  \"discountPercent\": 10,\n  \"maxUses\": 50,\n  \"expiresAt\": \"2026-04-01T00:00:00.000Z\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{baseUrl}}/api/coupons", "host": ["{{baseUrl}}"], "path": ["api", "coupons"] },
+                "description": "Creates a new coupon.\n\n**Enforced rules:**\n- Code must be unique (auto-uppercased)\n- Expiry must be 3–7 days from now\n- discountPercent: 1–100\n- maxUses: minimum 1\n\nAuto-saves `couponId` to collection variables."
+              }
+            },
+            {
+              "name": "Deactivate Coupon",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/coupons/{{couponId}}/deactivate", "host": ["{{baseUrl}}"], "path": ["api", "coupons", "{{couponId}}", "deactivate"] },
+                "description": "Deactivates a coupon immediately. Cannot be reactivated — create a new one instead."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🚚 Shipping",
+      "description": "Shippo integration for live carrier rates and tracking webhooks.",
+      "item": [
+        {
+          "name": "Get Shipping Rates",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"toAddress\": {\n    \"name\": \"John Doe\",\n    \"street\": \"123 Customer Ave\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"zip\": \"10001\"\n  },\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"variantId\": \"{{variantId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/shipping/rates", "host": ["{{baseUrl}}"], "path": ["api", "shipping", "rates"] },
+            "description": "Public — returns live carrier rates from Shippo sorted cheapest first.\n\nCalled when customer enters their shipping address at checkout.\n\nSave the `rateId` and `amount` from the selected rate — needed for Create Order."
+          }
+        },
+        {
+          "name": "Shippo Tracking Webhook (Shippo only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-shippo-hmac-sha256", "value": "SHIPPO_SENDS_THIS", "description": "HMAC-SHA256 signature. Do not set manually." }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"track_updated\",\n  \"data\": {\n    \"tracking_number\": \"1234567890\",\n    \"tracking_status\": {\n      \"status\": \"DELIVERED\"\n    }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/shipping/webhook/shippo", "host": ["{{baseUrl}}"], "path": ["api", "shipping", "webhook", "shippo"] },
+            "description": "⚠️ CALLED BY SHIPPO ONLY — do not call manually.\n\nReceives tracking status updates (TRANSIT, DELIVERED, etc.).\n\nVerified via HMAC-SHA256 signature if SHIPPO_WEBHOOK_SECRET is set."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛒 Orders",
+      "description": "Order lifecycle: checkout → payment → fulfillment. Includes customer aggregation and abandoned cart reminders.",
+      "item": [
+        {
+          "name": "Public",
+          "item": [
+            {
+              "name": "Create Order (Checkout)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.orderId) {",
+                      "    pm.collectionVariables.set('orderId', res.orderId);",
+                      "    console.log('orderId saved:', res.orderId);",
+                      "}",
+                      "if (res.checkoutUrl) {",
+                      "    console.log('Checkout URL:', res.checkoutUrl);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"customer@example.com\",\n  \"shippingAddress\": {\n    \"firstName\": \"John\",\n    \"lastName\": \"Doe\",\n    \"street\": \"123 Customer Ave\",\n    \"aptOrSuite\": \"Apt 4B\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"zipCode\": \"10001\",\n    \"phone\": \"2125551234\"\n  },\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"variantId\": \"{{variantId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"shippoRateId\": \"REPLACE_WITH_RATE_ID\",\n  \"shippingCost\": 7.40\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{baseUrl}}/api/order/checkout", "host": ["{{baseUrl}}"], "path": ["api", "order", "checkout"] },
+                "description": "Creates a pending order and returns a Stripe Checkout URL.\n\n**Flow:**\n1. Call Get Shipping Rates → pick a rate\n2. Fill in `shippoRateId` and `shippingCost` from chosen rate\n3. Open returned `checkoutUrl` in browser to pay\n\n**Optional:** Add `couponCode` field to apply a discount.\n\nAuto-saves `orderId`.\n\n⚠️ Verifies shipping cost against Shippo to prevent tampering."
+              }
+            },
+            {
+              "name": "Create Order with Coupon",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"customer@example.com\",\n  \"shippingAddress\": {\n    \"firstName\": \"Jane\",\n    \"lastName\": \"Doe\",\n    \"street\": \"456 Discount Blvd\",\n    \"city\": \"Los Angeles\",\n    \"state\": \"CA\",\n    \"zipCode\": \"90001\",\n    \"phone\": \"3105551234\"\n  },\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"variantId\": \"{{variantId}}\",\n      \"quantity\": 2\n    }\n  ],\n  \"couponCode\": \"PICKLE10\",\n  \"shippoRateId\": \"REPLACE_WITH_RATE_ID\",\n  \"shippingCost\": 7.40\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{baseUrl}}/api/order/checkout", "host": ["{{baseUrl}}"], "path": ["api", "order", "checkout"] },
+                "description": "Same as Create Order but with a `couponCode` applied.\n\nThe backend validates the coupon server-side (active, not expired, uses remaining) and calculates the discount from the DB — never trusts the client amount.\n\nCoupon `usedCount` is incremented atomically only after successful Stripe payment."
+              }
+            },
+            {
+              "name": "Get Order by Session (Public Receipt)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/order/session/{{sessionId}}", "host": ["{{baseUrl}}"], "path": ["api", "order", "session", "{{sessionId}}"] },
+                "description": "Public — returns masked order info for the post-payment success page.\n\nStripe redirects here after checkout. `sessionId` comes from the Stripe Checkout session.\n\nOnly exposes safe fields (items, totals, status, first name, city) — no full address or email."
+              }
+            },
+            {
+              "name": "Resume Order (Abandoned Cart Link)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/order/{{orderId}}/resume", "host": ["{{baseUrl}}"], "path": ["api", "order", "{{orderId}}", "resume"] },
+                "description": "Public — called when customer clicks \"Complete My Order\" in the abandoned cart email.\n\n**Flow:**\n1. Checks if already paid → redirects to order confirmation\n2. Checks stock for all items → redirects to out-of-stock page if unavailable\n3. Regenerates Stripe session if expired\n4. Redirects to Stripe Checkout\n\n**Returns:** 302 redirect (not JSON)"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin",
+          "item": [
+            {
+              "name": "Get All Orders (Paginated)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/order/all?page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "order", "all"],
+                  "query": [
+                    { "key": "page", "value": "1", "description": "Page number (default: 1)" },
+                    { "key": "limit", "value": "10", "description": "Items per page (default: 10)" }
+                  ]
+                },
+                "description": "Paginated list of all orders sorted newest first.\n\n**Returns:** `{ data, pagination: { total, page, limit, totalPages } }`"
+              }
+            },
+            {
+              "name": "Get Orders by Customer Email",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/order/by-email?email=customer@example.com",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "order", "by-email"],
+                  "query": [{ "key": "email", "value": "customer@example.com", "description": "Customer email to look up" }]
+                },
+                "description": "Returns all paid orders for a specific customer email, sorted newest first.\n\nUsed by the customer detail drawer in the admin dashboard."
+              }
+            },
+            {
+              "name": "Get Unpaid Orders (Call List)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/order/unpaid", "host": ["{{baseUrl}}"], "path": ["api", "order", "unpaid"] },
+                "description": "Returns all pending/failed orders for manual follow-up.\n\nIncludes: email, name, phone, items, total, checkout URL.\n\nPending orders auto-delete after 3 days via TTL index."
+              }
+            },
+            {
+              "name": "Get Customers (Paginated Aggregation)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/order/customers?page=1&limit=25",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "order", "customers"],
+                  "query": [
+                    { "key": "page", "value": "1", "description": "Page number (default: 1)" },
+                    { "key": "limit", "value": "25", "description": "Customers per page (default: 25)" }
+                  ]
+                },
+                "description": "Server-side MongoDB aggregation — groups paid orders by email.\n\nReturns one row per unique customer: name, email, city, state, totalOrders, totalSpent, firstOrder, lastOrder.\n\nSorted by totalSpent descending (highest spenders first).\n\n**Returns:** `{ data, pagination: { total, page, limit, totalPages } }`"
+              }
+            },
+            {
+              "name": "Send Manual Reminder",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/order/{{orderId}}/remind", "host": ["{{baseUrl}}"], "path": ["api", "order", "{{orderId}}", "remind"] },
+                "description": "Sends an abandoned cart reminder email to the customer.\n\n**Blocks if:**\n- Order is already paid\n- Any item is now out of stock\n\nIncludes a \"Complete My Order\" link that checks stock before redirecting to Stripe."
+              }
+            },
+            {
+              "name": "Update Order Status",
+              "request": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"orderStatus\": \"shipped\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{baseUrl}}/api/order/{{orderId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "order", "{{orderId}}", "status"] },
+                "description": "Update order fulfillment status. Only works on paid orders.\n\n**Valid transitions:**\n- `processing` → `shipped` or `cancelled`\n- `shipped` → `delivered`\n- `delivered` → (terminal)\n- `cancelled` → (terminal)\n\n**Values:** `processing`, `shipped`, `delivered`, `cancelled`"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "💳 Payments",
+      "description": "Stripe webhook — called by Stripe, not by your app.",
+      "item": [
+        {
+          "name": "Stripe Webhook (DO NOT CALL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "stripe-signature", "value": "STRIPE_SENDS_THIS", "description": "Signed by Stripe. Do not set manually." }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"checkout.session.completed\",\n  \"data\": {\n    \"object\": {\n      \"client_reference_id\": \"{{orderId}}\"\n    }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/payments/webhook", "host": ["{{baseUrl}}"], "path": ["api", "payments", "webhook"] },
+            "description": "⚠️ CALLED BY STRIPE ONLY — do not call manually.\n\nFor local testing:\n```\nstripe listen --forward-to localhost:4200/api/payments/webhook\n```\n\n**Events handled:**\n- `checkout.session.completed` → marks paid, deducts stock, increments coupon usage, purchases Shippo label, sends confirmation email\n- `checkout.session.expired` → marks failed\n\n**Fraud check:** Verifies Stripe amount matches DB order total (items + shipping - discount)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Settings",
+      "description": "Store configuration — ship-from address used by Shippo.",
+      "item": [
+        {
+          "name": "Get Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/settings", "host": ["{{baseUrl}}"], "path": ["api", "settings"] },
+            "description": "Returns current store settings including the ship-from warehouse address."
+          }
+        },
+        {
+          "name": "Update Ship-From Address",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipFrom\": {\n    \"name\": \"The California Pickle\",\n    \"company\": \"The California Pickle\",\n    \"street1\": \"123 Main Street\",\n    \"city\": \"Los Angeles\",\n    \"state\": \"CA\",\n    \"zip\": \"90001\",\n    \"country\": \"US\",\n    \"phone\": \"2135550000\",\n    \"email\": \"shipping@thecaliforniapickle.com\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/api/settings", "host": ["{{baseUrl}}"], "path": ["api", "settings"] },
+            "description": "Updates the warehouse ship-from address used by Shippo for all rate calculations and label purchases.\n\n⚠️ Set this to the real address before going live."
+          }
+        }
+      ]
+    }
+  ]
+}
